@@ -23,3 +23,19 @@ export const sendInitMessage = programId => {
         })
     );
 };
+
+export const sendPatches = (programId, patch) => {
+    wsClient.send(
+        JSON.stringify({
+            type: WS_MESSAGE_TYPES.patch,
+            data: {
+                id: programId,
+                patch
+            }
+        })
+    );
+};
+
+export const closeWs = () => {
+    wsClient.close();
+};

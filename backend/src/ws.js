@@ -10,7 +10,6 @@ const wss = new WebSocket.Server({ port: 8080 });
 
 const noop = () => {};
 function heartbeat() {
-    console.log("PONG");
     this.isAlive = true;
 }
 
@@ -21,7 +20,6 @@ wss.on("connection", socket => {
     socket.on("pong", heartbeat);
 
     socket.on("message", async msg => {
-        console.log("NEW MESSAGE");
         let parsedMsg;
         if (typeof msg !== "string") {
             console.log("WSERR: WS message must be a string: " + msg);
@@ -57,16 +55,19 @@ wss.on("connection", socket => {
             }
         } else {
             try {
-                const { patches, id } = parsedMsg.data;
-                if (parsedMsg.data.patches == undefined) {
+                const { patch, id } = parsedMsg.data;
+                if (parsedMsg.data.patch == undefined) {
                     console.error("WSERR: Patch content not found");
                     return;
                 }
                 const matchedProgram = await Program.findById(id);
                 const oldContent = matchedProgram.content;
+                const patches = dmp.patch_fromText(patch);
                 const results = dmp.patch_apply(patches, oldContent);
                 socketBucket[id].forEach(sock => {
-                    sock.send(results[0]);
+                    if (sock !== socket) {
+                        sock.send(patch);
+                    }
                 });
                 matchedProgram.content = results[0];
                 await matchedProgram.save();
@@ -89,8 +90,8 @@ const closeSocket = ws => {
             delete socketBucket[ws.programId];
         } else {
             socketBucket[ws.programId] = sockets.filter(sock => sock !== ws);
+            console.log(socketBucket[ws.programId].length);
         }
-        console.log(socketBucket);
     }
 };
 
