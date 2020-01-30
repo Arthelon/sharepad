@@ -1,6 +1,7 @@
 const Router = require("express").Router();
 const mongoose = require("mongoose");
 const Program = require("./models/Program");
+const automerge = require("automerge");
 
 const DEFAULT_PROGRAM = "// Insert code here";
 
@@ -9,9 +10,9 @@ Router.get("/program/:id", async (req, res, next) => {
     try {
         const program = await Program.findById(id);
         res.json({
-            message: "Successfully retrieved program contents",
+            message: "Successfully retrieved program",
             data: {
-                content: program.content,
+                doc: program.doc,
                 id: program._id
             }
         });
@@ -28,12 +29,17 @@ Router.get("/program/:id", async (req, res, next) => {
 
 Router.post("/program", async (req, res) => {
     const program = new Program();
-    program.content = DEFAULT_PROGRAM;
+    let doc = automerge.init();
+    doc = automerge.change(doc, docRef => {
+        docRef.content = new automerge.Text();
+        docRef.content.insertAt(0, ...DEFAULT_PROGRAM.split(""));
+    });
+    program.doc = automerge.save(doc);
     await program.save();
     res.json({
         message: "Successfully created new program",
         data: {
-            content: program.content,
+            doc: program.doc,
             id: program._id
         }
     });

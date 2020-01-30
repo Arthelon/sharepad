@@ -10,6 +10,7 @@
     "author": "Daniel <hsing.daniel@gmail.com> (http://arthelon.github.io)",
     "license": "ISC",
     "dependencies": {
+        "automerge": "^0.12.1",
         "body-parser": "^1.19.0",
         "cors": "^2.8.5",
         "diff-match-patch": "^1.0.4",

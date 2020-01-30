@@ -2,6 +2,7 @@ const Program = require("./models/Program");
 const WebSocket = require("ws");
 const { validateMessage, MESSAGE_TYPES } = require("./util/wsMessages");
 const DiffMatchPatch = require("diff-match-patch");
+const automerge = require("automerge");
 
 const dmp = new DiffMatchPatch();
 const socketBucket = {};
@@ -55,26 +56,26 @@ wss.on("connection", socket => {
             }
         } else {
             try {
-                const { patch, id } = parsedMsg.data;
-                if (parsedMsg.data.patch == undefined) {
-                    console.error("WSERR: Patch content not found");
+                const { doc, id } = parsedMsg.data;
+                if (parsedMsg.data.doc == undefined) {
+                    console.error("WSERR: Doc content not found");
                     return;
                 }
                 const matchedProgram = await Program.findById(id);
-                const oldContent = matchedProgram.content;
-                const patches = dmp.patch_fromText(patch);
-                const results = dmp.patch_apply(patches, oldContent);
+                let storedDoc = automerge.load(matchedProgram.doc);
+                const changes = JSON.parse(doc);
+                storedDoc = automerge.applyChanges(storedDoc, changes);
                 if (!!socketBucket[id]) {
                     socketBucket[id].forEach(sock => {
                         if (sock !== socket) {
-                            sock.send(results[0]);
+                            sock.send(doc);
                         }
                     });
-                    matchedProgram.content = results[0];
+                    matchedProgram.doc = automerge.save(storedDoc);
                     await matchedProgram.save();
                 }
             } catch (err) {
-                console.error("WSERR: Error while applying patches: " + err);
+                console.error("WSERR: Error while merging docs: " + err);
             }
         }
     });

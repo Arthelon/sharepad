@@ -2,7 +2,7 @@ import axios from "axios";
 
 const WS_MESSAGE_TYPES = {
     init: "ws_message_init",
-    patch: "ws_message_patch"
+    update_doc: "ws_message_update_doc"
 };
 
 const httpClient = axios.create({
@@ -24,13 +24,13 @@ export const sendInitMessage = programId => {
     );
 };
 
-export const sendPatches = (programId, patch) => {
+export const updateDoc = (programId, doc) => {
     wsClient.send(
         JSON.stringify({
-            type: WS_MESSAGE_TYPES.patch,
+            type: WS_MESSAGE_TYPES.update_doc,
             data: {
                 id: programId,
-                patch
+                doc
             }
         })
     );

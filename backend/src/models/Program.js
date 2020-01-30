@@ -6,7 +6,7 @@ const Program = new mongoose.Schema({
         type: String,
         default: shortid.generate
     },
-    content: String
+    doc: String
 });
 
 module.exports = mongoose.model("Program", Program);

@@ -1,6 +1,6 @@
 const MESSAGE_TYPES = {
     init: "ws_message_init",
-    patch: "ws_message_patch"
+    update_doc: "ws_message_update_doc"
 };
 
 const validateMessage = msg => {
@@ -8,7 +8,8 @@ const validateMessage = msg => {
         return null;
     }
     if (
-        (msg.type === MESSAGE_TYPES.init || msg.type === MESSAGE_TYPES.patch) &&
+        (msg.type === MESSAGE_TYPES.init ||
+            msg.type === MESSAGE_TYPES.update_doc) &&
         msg.data !== undefined &&
         msg.data.id !== undefined
     ) {
