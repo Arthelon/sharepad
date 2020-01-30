@@ -1,6 +1,5 @@
 const express = require("express");
 const app = express();
-const http = require("http");
 const bodyParser = require("body-parser");
 const session = require("express-session");
 const mongoose = require("mongoose");
@@ -34,10 +33,8 @@ app.use((err, req, res, next) => {
     });
 });
 
-const server = http.createServer(app);
-
 const port = process.env.PORT || 3000;
-server.listen(process.env.PORT, () => {
+app.listen(process.env.PORT, () => {
     console.log("Listening on port " + port);
 });
 
@@ -58,5 +55,3 @@ if (!process.env.MONGO_URI) {
             process.exit(1);
         });
 }
-
-module.exports = server;

@@ -8,6 +8,7 @@
     "@testing-library/user-event": "^7.1.2",
     "axios": "^0.19.2",
     "diff-match-patch": "^1.0.4",
+    "lodash.debounce": "^4.0.8",
     "monaco-editor": "^0.19.3",
     "prop-types": "^15.7.2",
     "react": "^16.12.0",

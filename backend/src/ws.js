@@ -64,13 +64,15 @@ wss.on("connection", socket => {
                 const oldContent = matchedProgram.content;
                 const patches = dmp.patch_fromText(patch);
                 const results = dmp.patch_apply(patches, oldContent);
-                socketBucket[id].forEach(sock => {
-                    if (sock !== socket) {
-                        sock.send(patch);
-                    }
-                });
-                matchedProgram.content = results[0];
-                await matchedProgram.save();
+                if (!!socketBucket[id]) {
+                    socketBucket[id].forEach(sock => {
+                        if (sock !== socket) {
+                            sock.send(results[0]);
+                        }
+                    });
+                    matchedProgram.content = results[0];
+                    await matchedProgram.save();
+                }
             } catch (err) {
                 console.error("WSERR: Error while applying patches: " + err);
             }

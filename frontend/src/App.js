@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Editor from "./components/Editor";
 import {
     getProgram,
@@ -8,6 +8,7 @@ import {
     wsClient
 } from "./apiClient";
 import DiffMatchPatch from "diff-match-patch";
+import debounce from "lodash.debounce";
 
 const PROGRAM_ID = "YoSgfSIZ";
 
@@ -15,6 +16,17 @@ const dmp = new DiffMatchPatch();
 
 function App() {
     const [content, setContent] = useState("");
+    const monacoRef = useRef(null);
+
+    const handleChange = debounce(() => {
+        console.log(content);
+        const value = monacoRef.current.editor.getModels()[0].getValue();
+        const patches = dmp.patch_make(content, value);
+        const patchString = dmp.patch_toText(patches);
+        sendPatches(PROGRAM_ID, patchString);
+        setContent(value);
+    }, 700);
+
     useEffect(() => {
         getProgram(PROGRAM_ID).then(resp => {
             if (resp && resp.data) {
@@ -22,30 +34,22 @@ function App() {
                 sendInitMessage(PROGRAM_ID);
             }
         });
+
+        wsClient.onmessage = ev => {
+            setContent(ev.data);
+        };
         return () => {
             closeWs();
         };
     }, []);
 
-    useEffect(() => {
-        wsClient.onmessage = ev => {
-            console.log(ev.data);
-            const patches = dmp.patch_fromText(ev.data);
-            console.log("Content" + content);
-            const results = dmp.patch_apply(patches, content);
-            setContent(results[0]);
-        };
-    }, [content]);
-
-    const handleChange = value => {
-        console.log("HANDLE CHANGE");
-        const patches = dmp.patch_make(content, value);
-        const patchString = dmp.patch_toText(patches);
-        sendPatches(PROGRAM_ID, patchString);
-        setContent(value);
-    };
-
-    return <Editor content={content} onChange={handleChange} />;
+    return (
+        <Editor
+            content={content}
+            onChange={handleChange}
+            monacoRef={monacoRef}
+        />
+    );
 }
 
 export default App;

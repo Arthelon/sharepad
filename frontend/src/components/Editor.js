@@ -1,7 +1,6 @@
 import React, { useRef, useEffect } from "react";
 import PropTypes from "prop-types";
 import MonacoEditor from "react-monaco-editor";
-import { debounce } from "../utils";
 
 const editorOptions = {
     fontSize: 14,
@@ -9,13 +8,10 @@ const editorOptions = {
     scrollBeyondLastLine: false
 };
 
-function Editor({ content, onChange }) {
-    const monaco = useRef(null);
+const Editor = ({ content, onChange, monacoRef }) => {
     const willMount = monacoInst => {
-        monaco.current = monacoInst;
+        monacoRef.current = monacoInst;
     };
-    console.log(content);
-    const handleChange = debounce(onChange, 700);
 
     return (
         <MonacoEditor
@@ -23,14 +19,15 @@ function Editor({ content, onChange }) {
             theme="vs-dark"
             editorWillMount={willMount}
             options={editorOptions}
-            onChange={handleChange}
+            onChange={onChange}
             value={content}
         />
     );
-}
+};
 Editor.propTypes = {
     content: PropTypes.string.isRequired,
-    onChange: PropTypes.func.isRequired
+    onChange: PropTypes.func.isRequired,
+    monacoRef: PropTypes.object.isRequired
 };
 
 export default Editor;
