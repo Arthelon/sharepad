@@ -1,8 +1,12 @@
 import axios from "axios";
+import ReconnectingWebsocket from "reconnecting-websocket";
 
-const WS_MESSAGE_TYPES = {
-    init: "ws_message_init",
-    update_doc: "ws_message_update_doc"
+export const WS_MESSAGE_TYPES = {
+    client_init: "ws_client_init",
+    client_update_doc: "ws_client_update_doc",
+    server_request_id: "ws_server_request_id",
+    server_doc: "ws_server_doc",
+    server_doc_changes: "ws_server_doc_changes"
 };
 
 const httpClient = axios.create({
@@ -11,12 +15,14 @@ const httpClient = axios.create({
 
 export const getProgram = id => httpClient.get("/program/" + id);
 
-export const wsClient = new WebSocket(process.env.REACT_APP_WS_HOST);
+export const wsClient = new ReconnectingWebsocket(
+    process.env.REACT_APP_WS_HOST
+);
 
 export const sendInitMessage = programId => {
     wsClient.send(
         JSON.stringify({
-            type: WS_MESSAGE_TYPES.init,
+            type: WS_MESSAGE_TYPES.client_init,
             data: {
                 id: programId
             }
@@ -24,13 +30,13 @@ export const sendInitMessage = programId => {
     );
 };
 
-export const updateDoc = (programId, doc) => {
+export const sendProgramChanges = (programId, changes) => {
     wsClient.send(
         JSON.stringify({
-            type: WS_MESSAGE_TYPES.update_doc,
+            type: WS_MESSAGE_TYPES.client_update_doc,
             data: {
                 id: programId,
-                doc
+                changes
             }
         })
     );

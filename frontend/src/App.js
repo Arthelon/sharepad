@@ -1,11 +1,12 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Editor from "./components/Editor";
 import {
     getProgram,
     sendInitMessage,
     closeWs,
-    updateDoc,
-    wsClient
+    sendProgramChanges,
+    wsClient,
+    WS_MESSAGE_TYPES
 } from "./apiClient";
 import DiffMatchPatch from "diff-match-patch";
 import debounce from "lodash.debounce";
@@ -16,6 +17,7 @@ const PROGRAM_ID = "LDnI1Bs-";
 const dmp = new DiffMatchPatch();
 
 function App() {
+    const [programId, setProgramId] = useState(PROGRAM_ID);
     const [content, setContent] = useState("");
     const monacoRef = useRef(null);
     const doc = useRef(null);
@@ -48,27 +50,30 @@ function App() {
         });
         const changes = automerge.getChanges(doc.current, newDoc);
         doc.current = newDoc;
-        updateDoc(PROGRAM_ID, JSON.stringify(changes));
+        sendProgramChanges(programId, JSON.stringify(changes));
         setContent(doc.current.content.toString());
     }, 700);
 
-    // const handleChange = useCallback(debouncedChangeHandler, [content]);
-
     useEffect(() => {
-        getProgram(PROGRAM_ID).then(resp => {
-            if (resp && resp.data) {
-                const serializedDoc = resp.data.data.doc;
-                doc.current = automerge.load(serializedDoc);
-                setContent(doc.current.content.toString());
-                sendInitMessage(PROGRAM_ID);
-            }
-        });
+        sendInitMessage(programId);
 
         wsClient.onmessage = ev => {
-            const changes = JSON.parse(ev.data);
-            doc.current = automerge.applyChanges(doc.current, changes);
-            console.log(doc.current.content.toString());
-            setContent(doc.current.content.toString());
+            const message = JSON.parse(ev.data);
+            console.log("Received WS Message:  " + message.type);
+            console.log("Message data: " + message.data);
+            if (message.type === WS_MESSAGE_TYPES.server_request_id) {
+                sendInitMessage(programId);
+            } else if (message.type === WS_MESSAGE_TYPES.server_doc) {
+                doc.current = automerge.load(message.data.doc);
+                setContent(doc.current.content.toString());
+            } else if (message.type === WS_MESSAGE_TYPES.server_doc_changes) {
+                doc.current = automerge.applyChanges(
+                    doc.current,
+                    JSON.parse(message.data.changes)
+                );
+                console.log(doc.current.content.toString());
+                setContent(doc.current.content.toString());
+            }
         };
         return () => {
             closeWs();

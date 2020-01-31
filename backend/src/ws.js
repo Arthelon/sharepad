@@ -1,10 +1,9 @@
 const Program = require("./models/Program");
 const WebSocket = require("ws");
-const { validateMessage, MESSAGE_TYPES } = require("./util/wsMessages");
+const { validateClientMessage, MESSAGE_TYPES } = require("./util/wsMessages");
 const DiffMatchPatch = require("diff-match-patch");
 const automerge = require("automerge");
 
-const dmp = new DiffMatchPatch();
 const socketBucket = {};
 
 const wss = new WebSocket.Server({ port: 8080 });
@@ -19,6 +18,11 @@ wss.on("connection", socket => {
     // pong
     socket.isAlive = true;
     socket.on("pong", heartbeat);
+    socket.send(
+        JSON.stringify({
+            type: MESSAGE_TYPES.server_request_id
+        })
+    );
 
     socket.on("message", async msg => {
         let parsedMsg;
@@ -34,14 +38,14 @@ wss.on("connection", socket => {
             );
             return;
         }
-        if (!validateMessage(parsedMsg)) {
+        if (!validateClientMessage(parsedMsg)) {
             console.error("WSERR: Invalid WS message: " + msg);
             return;
         }
         const type = parsedMsg.type;
-        if (type === MESSAGE_TYPES.init) {
+        console.log(parsedMsg);
+        if (type === MESSAGE_TYPES.client_init) {
             try {
-                console.log(parsedMsg.data.id);
                 const matchedProgram = await Program.findById(
                     parsedMsg.data.id
                 );
@@ -51,29 +55,51 @@ wss.on("connection", socket => {
                     socketBucket[matchedProgram._id].push(socket);
                 }
                 socket.programId = matchedProgram._id;
+                socket.send(
+                    JSON.stringify({
+                        type: MESSAGE_TYPES.server_doc,
+                        data: {
+                            doc: matchedProgram.doc
+                        }
+                    })
+                );
             } catch (err) {
                 console.error("WSERR: Error finding program: " + err);
             }
-        } else {
+        } else if (type === MESSAGE_TYPES.client_update_doc) {
             try {
-                const { doc, id } = parsedMsg.data;
-                if (parsedMsg.data.doc == undefined) {
-                    console.error("WSERR: Doc content not found");
+                const { changes, id } = parsedMsg.data;
+                if (changes == undefined) {
+                    console.error("WSERR: Changes not found");
                     return;
                 }
                 const matchedProgram = await Program.findById(id);
                 let storedDoc = automerge.load(matchedProgram.doc);
-                const changes = JSON.parse(doc);
-                storedDoc = automerge.applyChanges(storedDoc, changes);
+                const parsedChanges = JSON.parse(changes);
+                storedDoc = automerge.applyChanges(storedDoc, parsedChanges);
                 if (!!socketBucket[id]) {
+                    const message = JSON.stringify({
+                        type: MESSAGE_TYPES.server_doc_changes,
+                        data: {
+                            changes
+                        }
+                    });
                     socketBucket[id].forEach(sock => {
                         if (sock !== socket) {
-                            sock.send(doc);
+                            sock.send(message);
                         }
                     });
                     console.log("New Doc: " + storedDoc.content.toString());
                     matchedProgram.doc = automerge.save(storedDoc);
                     await matchedProgram.save();
+
+                    // Adds socket to channel if it's not already in there
+                    if (socketBucket[id].indexOf(socket) == -1) {
+                        socketBucket.push(socket);
+                    }
+                } else {
+                    // initialize new channel if it doesn't exist
+                    socketBucket[id] = [socket];
                 }
             } catch (err) {
                 console.error("WSERR: Error while merging docs: " + err);

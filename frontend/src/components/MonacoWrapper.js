@@ -56,12 +56,15 @@ const MonacoWrapper = props => {
         if (value != null && value !== model.getValue()) {
             preventTriggerChange.current = true;
             editor.pushUndoStop();
-            model.pushEditOperations(editor.getSelections(), [
-                {
-                    range: model.getFullModelRange(),
-                    text: value
-                }
-            ]);
+            model.pushEditOperations(
+                [editor.getSelection()],
+                [
+                    {
+                        range: model.getFullModelRange(),
+                        text: value
+                    }
+                ]
+            );
             editor.pushUndoStop();
             preventTriggerChange.current = false;
         }

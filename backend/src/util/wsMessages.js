@@ -1,15 +1,18 @@
 const MESSAGE_TYPES = {
-    init: "ws_message_init",
-    update_doc: "ws_message_update_doc"
+    client_init: "ws_client_init",
+    client_update_doc: "ws_client_update_doc",
+    server_request_id: "ws_server_request_id",
+    server_doc: "ws_server_doc",
+    server_doc_changes: "ws_server_doc_changes"
 };
 
-const validateMessage = msg => {
+const validateClientMessage = msg => {
     if (!msg) {
         return null;
     }
     if (
-        (msg.type === MESSAGE_TYPES.init ||
-            msg.type === MESSAGE_TYPES.update_doc) &&
+        (msg.type === MESSAGE_TYPES.client_init ||
+            msg.type === MESSAGE_TYPES.client_update_doc) &&
         msg.data !== undefined &&
         msg.data.id !== undefined
     ) {
@@ -19,6 +22,6 @@ const validateMessage = msg => {
 };
 
 module.exports = {
-    validateMessage,
+    validateClientMessage,
     MESSAGE_TYPES
 };
