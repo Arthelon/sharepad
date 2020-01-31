@@ -71,6 +71,7 @@ wss.on("connection", socket => {
                             sock.send(doc);
                         }
                     });
+                    console.log("New Doc: " + storedDoc.content.toString());
                     matchedProgram.doc = automerge.save(storedDoc);
                     await matchedProgram.save();
                 }

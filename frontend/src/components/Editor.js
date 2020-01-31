@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from "react";
 import PropTypes from "prop-types";
-import MonacoEditor from "react-monaco-editor";
+import MonacoWrapper from "./MonacoWrapper";
 
 const editorOptions = {
     fontSize: 14,
@@ -14,7 +14,7 @@ const Editor = ({ content, onChange, monacoRef }) => {
     };
 
     return (
-        <MonacoEditor
+        <MonacoWrapper
             language="javascript"
             theme="vs-dark"
             editorWillMount={willMount}

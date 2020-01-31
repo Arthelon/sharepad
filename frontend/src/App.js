@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import Editor from "./components/Editor";
 import {
     getProgram,
@@ -20,13 +20,14 @@ function App() {
     const monacoRef = useRef(null);
     const doc = useRef(null);
 
-    const handleChange = debounce(value => {
-        const patches = dmp.patch_make(content, value);
+    const handleChange = debounce((prevValue, value) => {
+        console.log("PREV CONTENT: " + prevValue);
+        console.log("CHANGE: " + value);
+        const patches = dmp.patch_make(prevValue, value);
         const newDoc = automerge.change(doc.current, docRef => {
             patches.forEach(patch => {
                 let idx = patch.start1;
                 patch.diffs.forEach(([operation, changeText]) => {
-                    console.log("Doc Change: " + docRef.content);
                     switch (operation) {
                         case 1: // Insertion
                             docRef.content.insertAt(
@@ -50,6 +51,8 @@ function App() {
         updateDoc(PROGRAM_ID, JSON.stringify(changes));
         setContent(doc.current.content.toString());
     }, 700);
+
+    // const handleChange = useCallback(debouncedChangeHandler, [content]);
 
     useEffect(() => {
         getProgram(PROGRAM_ID).then(resp => {
