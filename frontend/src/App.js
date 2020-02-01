@@ -1,7 +1,6 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import Editor from "./components/Editor";
 import {
-    getProgram,
     sendInitMessage,
     closeWs,
     sendProgramChanges,
@@ -9,10 +8,10 @@ import {
     WS_MESSAGE_TYPES
 } from "./apiClient";
 import DiffMatchPatch from "diff-match-patch";
-import debounce from "lodash.debounce";
+import { useDebouncedCallback } from "use-debounce";
 import automerge from "automerge";
 
-const PROGRAM_ID = "bsGNrB6L";
+const PROGRAM_ID = "tb8s3OaA";
 
 const dmp = new DiffMatchPatch();
 
@@ -22,38 +21,41 @@ function App() {
     const monacoRef = useRef(null);
     const doc = useRef(null);
 
-    const handleChange = debounce(value => {
-        const prevValue = doc.current.content.toString();
-        console.log("PREV CONTENT: " + prevValue);
-        console.log("CHANGE: " + value);
-        const patches = dmp.patch_make(prevValue, value);
-        const newDoc = automerge.change(doc.current, docRef => {
-            patches.forEach(patch => {
-                let idx = patch.start1;
-                patch.diffs.forEach(([operation, changeText]) => {
-                    switch (operation) {
-                        case 1: // Insertion
-                            docRef.content.insertAt(
-                                idx,
-                                ...changeText.split("")
-                            );
-                        case 0: // No Change
-                            idx += changeText.length;
-                            break;
-                        case -1: // Deletion
-                            for (let i = 0; i < changeText.length; i++) {
-                                docRef.content.deleteAt(idx);
-                            }
-                            break;
-                    }
+    const [handleChange, _, flushChangeHandler] = useDebouncedCallback(
+        value => {
+            const prevValue = doc.current.content.toString();
+            console.log("PREV CONTENT: " + prevValue);
+            console.log("CHANGE: " + value);
+            const patches = dmp.patch_make(prevValue, value);
+            const newDoc = automerge.change(doc.current, docRef => {
+                patches.forEach(patch => {
+                    let idx = patch.start1;
+                    patch.diffs.forEach(([operation, changeText]) => {
+                        switch (operation) {
+                            case 1: // Insertion
+                                docRef.content.insertAt(
+                                    idx,
+                                    ...changeText.split("")
+                                );
+                            case 0: // No Change
+                                idx += changeText.length;
+                                break;
+                            case -1: // Deletion
+                                for (let i = 0; i < changeText.length; i++) {
+                                    docRef.content.deleteAt(idx);
+                                }
+                                break;
+                        }
+                    });
                 });
             });
-        });
-        const changes = automerge.getChanges(doc.current, newDoc);
-        doc.current = newDoc;
-        sendProgramChanges(programId, JSON.stringify(changes));
-        setContent(doc.current.content.toString());
-    }, 700);
+            const changes = automerge.getChanges(doc.current, newDoc);
+            doc.current = newDoc;
+            sendProgramChanges(programId, JSON.stringify(changes));
+            setContent(doc.current.content.toString());
+        },
+        700
+    );
 
     useEffect(() => {
         wsClient.onmessage = ev => {
@@ -65,8 +67,8 @@ function App() {
                 doc.current = automerge.load(message.data.doc);
                 setContent(doc.current.content.toString());
             } else if (message.type === WS_MESSAGE_TYPES.server_doc_changes) {
-                handleChange.flush();
                 setTimeout(() => {
+                    flushChangeHandler();
                     doc.current = automerge.applyChanges(
                         doc.current,
                         JSON.parse(message.data.changes)

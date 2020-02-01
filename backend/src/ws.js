@@ -1,7 +1,6 @@
 const Program = require("./models/Program");
 const WebSocket = require("ws");
 const { validateClientMessage, MESSAGE_TYPES } = require("./util/wsMessages");
-const DiffMatchPatch = require("diff-match-patch");
 const automerge = require("automerge");
 
 const socketBucket = {};
@@ -77,6 +76,8 @@ wss.on("connection", socket => {
                 let storedDoc = automerge.load(matchedProgram.doc);
                 const parsedChanges = JSON.parse(changes);
                 storedDoc = automerge.applyChanges(storedDoc, parsedChanges);
+                matchedProgram.doc = automerge.save(storedDoc);
+                await matchedProgram.save();
                 if (!!socketBucket[id]) {
                     const message = JSON.stringify({
                         type: MESSAGE_TYPES.server_doc_changes,
@@ -92,8 +93,6 @@ wss.on("connection", socket => {
                     console.log(
                         "New Doc Contents: " + storedDoc.content.toString()
                     );
-                    matchedProgram.doc = automerge.save(storedDoc);
-                    await matchedProgram.save();
 
                     // Adds socket to channel if it's not already in there
                     if (socketBucket[id].indexOf(socket) == -1) {
