@@ -43,7 +43,7 @@ wss.on("connection", socket => {
             return;
         }
         const type = parsedMsg.type;
-        console.log(parsedMsg);
+        console.log("New Message: " + type);
         if (type === MESSAGE_TYPES.client_init) {
             try {
                 const matchedProgram = await Program.findById(
@@ -89,13 +89,15 @@ wss.on("connection", socket => {
                             sock.send(message);
                         }
                     });
-                    console.log("New Doc: " + storedDoc.content.toString());
+                    console.log(
+                        "New Doc Contents: " + storedDoc.content.toString()
+                    );
                     matchedProgram.doc = automerge.save(storedDoc);
                     await matchedProgram.save();
 
                     // Adds socket to channel if it's not already in there
                     if (socketBucket[id].indexOf(socket) == -1) {
-                        socketBucket.push(socket);
+                        socketBucket[id].push(socket);
                     }
                 } else {
                     // initialize new channel if it doesn't exist
@@ -113,7 +115,6 @@ wss.on("connection", socket => {
 });
 
 const closeSocket = ws => {
-    console.log("Socket closed");
     const sockets = socketBucket[ws.programId];
     if (!!sockets) {
         if (sockets.length == 1 && sockets[0] == ws) {

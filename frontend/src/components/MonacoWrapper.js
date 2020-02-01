@@ -71,7 +71,7 @@ const MonacoWrapper = props => {
         const subscription = editorRef.current.onDidChangeModelContent(
             event => {
                 if (!preventTriggerChange.current) {
-                    props.onChange(value, editor.getValue(), event);
+                    props.onChange(editor.getValue(), event);
                 }
             }
         );

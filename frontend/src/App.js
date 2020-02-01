@@ -12,7 +12,7 @@ import DiffMatchPatch from "diff-match-patch";
 import debounce from "lodash.debounce";
 import automerge from "automerge";
 
-const PROGRAM_ID = "LDnI1Bs-";
+const PROGRAM_ID = "bsGNrB6L";
 
 const dmp = new DiffMatchPatch();
 
@@ -22,7 +22,8 @@ function App() {
     const monacoRef = useRef(null);
     const doc = useRef(null);
 
-    const handleChange = debounce((prevValue, value) => {
+    const handleChange = debounce(value => {
+        const prevValue = doc.current.content.toString();
         console.log("PREV CONTENT: " + prevValue);
         console.log("CHANGE: " + value);
         const patches = dmp.patch_make(prevValue, value);
@@ -55,24 +56,23 @@ function App() {
     }, 700);
 
     useEffect(() => {
-        sendInitMessage(programId);
-
         wsClient.onmessage = ev => {
             const message = JSON.parse(ev.data);
             console.log("Received WS Message:  " + message.type);
-            console.log("Message data: " + message.data);
             if (message.type === WS_MESSAGE_TYPES.server_request_id) {
                 sendInitMessage(programId);
             } else if (message.type === WS_MESSAGE_TYPES.server_doc) {
                 doc.current = automerge.load(message.data.doc);
                 setContent(doc.current.content.toString());
             } else if (message.type === WS_MESSAGE_TYPES.server_doc_changes) {
-                doc.current = automerge.applyChanges(
-                    doc.current,
-                    JSON.parse(message.data.changes)
-                );
-                console.log(doc.current.content.toString());
-                setContent(doc.current.content.toString());
+                handleChange.flush();
+                setTimeout(() => {
+                    doc.current = automerge.applyChanges(
+                        doc.current,
+                        JSON.parse(message.data.changes)
+                    );
+                    setContent(doc.current.content.toString());
+                }, 1);
             }
         };
         return () => {
