@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import PropTypes from "prop-types";
+import { useParams } from "react-router-dom";
 import Editor from "./Editor";
 import {
     sendInitMessage,
@@ -14,7 +14,8 @@ import automerge from "automerge";
 
 const dmp = new DiffMatchPatch();
 
-function EditorContainer({ programId }) {
+function EditorContainer() {
+    const { programId } = useParams();
     const [content, setContent] = useState("");
     const editorRef = useRef(null);
     const doc = useRef(null);
@@ -71,6 +72,9 @@ function EditorContainer({ programId }) {
     );
 
     useEffect(() => {
+        editorRef.current.updateOptions({
+            readOnly: true
+        });
         wsClient.onmessage = ev => {
             const message = JSON.parse(ev.data);
             console.log("Received WS Message:  " + message.type);
@@ -79,6 +83,9 @@ function EditorContainer({ programId }) {
             } else if (message.type === WS_MESSAGE_TYPES.server_doc) {
                 doc.current = automerge.load(message.data.doc);
                 setContent(doc.current.content.toString());
+                editorRef.current.updateOptions({
+                    readOnly: false
+                });
             } else if (message.type === WS_MESSAGE_TYPES.server_doc_changes) {
                 setTimeout(() => {
                     flushChangeHandler();
@@ -128,8 +135,5 @@ function EditorContainer({ programId }) {
         />
     );
 }
-EditorContainer.propTypes = {
-    programId: PropTypes.string.isRequired
-};
 
 export default EditorContainer;
