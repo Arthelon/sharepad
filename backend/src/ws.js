@@ -67,7 +67,7 @@ wss.on("connection", socket => {
             }
         } else if (type === MESSAGE_TYPES.client_update_doc) {
             try {
-                const { changes, id } = parsedMsg.data;
+                const { startIdx, changeLength, changes, id } = parsedMsg.data;
                 if (changes == undefined) {
                     console.error("WSERR: Changes not found");
                     return;
@@ -82,7 +82,9 @@ wss.on("connection", socket => {
                     const message = JSON.stringify({
                         type: MESSAGE_TYPES.server_doc_changes,
                         data: {
-                            changes
+                            changes,
+                            startIdx,
+                            changeLength
                         }
                     });
                     socketBucket[id].forEach(sock => {

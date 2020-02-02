@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React from "react";
 import PropTypes from "prop-types";
 import MonacoWrapper from "./MonacoWrapper";
 
@@ -8,16 +8,16 @@ const editorOptions = {
     scrollBeyondLastLine: false
 };
 
-const Editor = ({ content, onChange, monacoRef }) => {
-    const willMount = monacoInst => {
-        monacoRef.current = monacoInst;
+const Editor = ({ content, onChange, editorRef }) => {
+    const didMount = editor => {
+        editorRef.current = editor;
     };
 
     return (
         <MonacoWrapper
             language="javascript"
             theme="vs-dark"
-            editorWillMount={willMount}
+            editorDidMount={didMount}
             options={editorOptions}
             onChange={onChange}
             value={content}
@@ -27,7 +27,7 @@ const Editor = ({ content, onChange, monacoRef }) => {
 Editor.propTypes = {
     content: PropTypes.string.isRequired,
     onChange: PropTypes.func.isRequired,
-    monacoRef: PropTypes.object.isRequired
+    editorRef: PropTypes.object.isRequired
 };
 
 export default Editor;

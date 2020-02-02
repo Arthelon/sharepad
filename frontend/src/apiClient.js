@@ -30,13 +30,13 @@ export const sendInitMessage = programId => {
     );
 };
 
-export const sendProgramChanges = (programId, changes) => {
+export const sendProgramChanges = (programId, data) => {
     wsClient.send(
         JSON.stringify({
             type: WS_MESSAGE_TYPES.client_update_doc,
             data: {
                 id: programId,
-                changes
+                ...data
             }
         })
     );

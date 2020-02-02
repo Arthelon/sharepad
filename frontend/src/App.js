@@ -18,7 +18,7 @@ const dmp = new DiffMatchPatch();
 function App() {
     const [programId, setProgramId] = useState(PROGRAM_ID);
     const [content, setContent] = useState("");
-    const monacoRef = useRef(null);
+    const editorRef = useRef(null);
     const doc = useRef(null);
 
     const [handleChange, _, flushChangeHandler] = useDebouncedCallback(
@@ -27,23 +27,34 @@ function App() {
             console.log("PREV CONTENT: " + prevValue);
             console.log("CHANGE: " + value);
             const patches = dmp.patch_make(prevValue, value);
+            let startIdx = -1;
+            let changeLength = 0;
             const newDoc = automerge.change(doc.current, docRef => {
+                console.log(patches);
                 patches.forEach(patch => {
                     let idx = patch.start1;
                     patch.diffs.forEach(([operation, changeText]) => {
                         switch (operation) {
                             case 1: // Insertion
+                                if (startIdx === -1) {
+                                    startIdx = idx;
+                                }
                                 docRef.content.insertAt(
                                     idx,
                                     ...changeText.split("")
                                 );
+                                changeLength += changeText.length;
                             case 0: // No Change
                                 idx += changeText.length;
                                 break;
                             case -1: // Deletion
+                                if (startIdx === -1) {
+                                    startIdx = idx;
+                                }
                                 for (let i = 0; i < changeText.length; i++) {
                                     docRef.content.deleteAt(idx);
                                 }
+                                changeLength -= changeText.length;
                                 break;
                         }
                     });
@@ -51,7 +62,11 @@ function App() {
             });
             const changes = automerge.getChanges(doc.current, newDoc);
             doc.current = newDoc;
-            sendProgramChanges(programId, JSON.stringify(changes));
+            sendProgramChanges(programId, {
+                changes: JSON.stringify(changes),
+                startIdx,
+                changeLength
+            });
             setContent(doc.current.content.toString());
         },
         700
@@ -69,11 +84,36 @@ function App() {
             } else if (message.type === WS_MESSAGE_TYPES.server_doc_changes) {
                 setTimeout(() => {
                     flushChangeHandler();
+                    const { changes, startIdx, changeLength } = message.data;
                     doc.current = automerge.applyChanges(
                         doc.current,
-                        JSON.parse(message.data.changes)
+                        JSON.parse(changes)
                     );
+                    const editor = editorRef.current;
+                    const model = editor.getModel();
+                    let offset = model.getOffsetAt(editor.getPosition());
+                    console.log("Old Offset " + offset);
+                    console.log(startIdx);
+                    if (offset > startIdx) {
+                        offset += changeLength;
+                    }
+
                     setContent(doc.current.content.toString());
+
+                    // Set new cursor position
+                    document.activeElement.blur();
+                    setTimeout(() => {
+                        editor.focus();
+                        console.log("New Offset: " + offset);
+                        const newPosition = model.getPositionAt(offset);
+                        editor.setPosition(newPosition);
+                        editor.setSelection({
+                            startLineNumber: newPosition.lineNumber,
+                            endLineNumber: newPosition.lineNumber,
+                            startColumn: newPosition.column,
+                            endColumn: newPosition.column
+                        });
+                    }, 1);
                 }, 1);
             }
         };
@@ -86,7 +126,7 @@ function App() {
         <Editor
             content={content}
             onChange={handleChange}
-            monacoRef={monacoRef}
+            editorRef={editorRef}
         />
     );
 }
