@@ -48,6 +48,10 @@ wss.on("connection", socket => {
                 const matchedProgram = await Program.findById(
                     parsedMsg.data.id
                 );
+                if (matchedProgram === null) {
+                    console.log("Invalid Program ID: " + parsedMsg.data.id);
+                    return;
+                }
                 if (!socketBucket[matchedProgram._id]) {
                     socketBucket[matchedProgram._id] = [socket];
                 } else {

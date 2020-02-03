@@ -1,13 +1,7 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import Editor from "./Editor";
-import {
-    sendInitMessage,
-    closeWs,
-    sendProgramChanges,
-    wsClient,
-    WS_MESSAGE_TYPES
-} from "../apiClient";
+import WebsocketClient, { WS_MESSAGE_TYPES } from "../wsClient";
 import DiffMatchPatch from "diff-match-patch";
 import { useDebouncedCallback } from "use-debounce";
 import automerge from "automerge";
@@ -19,6 +13,7 @@ function EditorContainer() {
     const [content, setContent] = useState("");
     const editorRef = useRef(null);
     const doc = useRef(null);
+    const wsClient = useRef(null);
 
     const [handleChange, _, flushChangeHandler] = useDebouncedCallback(
         value => {
@@ -29,7 +24,6 @@ function EditorContainer() {
             let startIdx = -1;
             let changeLength = 0;
             const newDoc = automerge.change(doc.current, docRef => {
-                console.log(patches);
                 patches.forEach(patch => {
                     let idx = patch.start1;
                     patch.diffs.forEach(([operation, changeText]) => {
@@ -61,7 +55,7 @@ function EditorContainer() {
             });
             const changes = automerge.getChanges(doc.current, newDoc);
             doc.current = newDoc;
-            sendProgramChanges(programId, {
+            wsClient.current.sendProgramChanges(programId, {
                 changes: JSON.stringify(changes),
                 startIdx,
                 changeLength
@@ -75,11 +69,12 @@ function EditorContainer() {
         editorRef.current.updateOptions({
             readOnly: true
         });
-        wsClient.onmessage = ev => {
+        wsClient.current = new WebsocketClient();
+        wsClient.current.onMessage(ev => {
             const message = JSON.parse(ev.data);
             console.log("Received WS Message:  " + message.type);
             if (message.type === WS_MESSAGE_TYPES.server_request_id) {
-                sendInitMessage(programId);
+                wsClient.current.sendInitMessage(programId);
             } else if (message.type === WS_MESSAGE_TYPES.server_doc) {
                 doc.current = automerge.load(message.data.doc);
                 setContent(doc.current.content.toString());
@@ -121,9 +116,9 @@ function EditorContainer() {
                     }, 1);
                 }, 1);
             }
-        };
+        });
         return () => {
-            closeWs();
+            wsClient.current.close();
         };
     }, []);
 

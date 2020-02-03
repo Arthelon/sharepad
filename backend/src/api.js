@@ -9,21 +9,21 @@ Router.get("/program/:id", async (req, res, next) => {
     const id = req.params.id;
     try {
         const program = await Program.findById(id);
-        res.json({
-            message: "Successfully retrieved program",
-            data: {
-                doc: program.doc,
-                id: program._id
-            }
-        });
-    } catch (err) {
-        if (err instanceof mongoose.Error.DocumentNotFoundError) {
+        if (program === null) {
             res.status(404).json({
                 message: "Program not found"
             });
         } else {
-            next(err);
+            res.json({
+                message: "Successfully retrieved program",
+                data: {
+                    doc: program.doc,
+                    id: program._id
+                }
+            });
         }
+    } catch (err) {
+        next(err);
     }
 });
 
