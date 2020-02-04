@@ -5,6 +5,7 @@ import WebsocketClient, { WS_MESSAGE_TYPES } from "../wsClient";
 import DiffMatchPatch from "diff-match-patch";
 import { useDebouncedCallback } from "use-debounce";
 import automerge from "automerge";
+import ShareButton from "./ShareButton";
 
 const dmp = new DiffMatchPatch();
 
@@ -70,6 +71,8 @@ function EditorContainer() {
             readOnly: true
         });
         wsClient.current = new WebsocketClient();
+
+        // Server MSG Handlers
         wsClient.current.onMessage(ev => {
             const message = JSON.parse(ev.data);
             console.log("Received WS Message:  " + message.type);
@@ -123,11 +126,14 @@ function EditorContainer() {
     }, []);
 
     return (
-        <Editor
-            content={content}
-            onChange={handleChange}
-            editorRef={editorRef}
-        />
+        <React.Fragment>
+            <Editor
+                content={content}
+                onChange={handleChange}
+                editorRef={editorRef}
+            />
+            <ShareButton programId={programId} />
+        </React.Fragment>
     );
 }
 

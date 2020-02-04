@@ -6,6 +6,9 @@ const automerge = require("automerge");
 const socketBucket = {};
 
 const wss = new WebSocket.Server({ port: 8080 });
+const printSocketCount = () => {
+    console.log("Socket Count: " + wss.clients.size);
+};
 
 const noop = () => {};
 function heartbeat() {
@@ -13,7 +16,8 @@ function heartbeat() {
 }
 
 wss.on("connection", socket => {
-    console.log("NEW SOCKET");
+    console.log("New Socket");
+    printSocketCount();
     // pong
     socket.isAlive = true;
     socket.on("pong", heartbeat);
@@ -77,6 +81,10 @@ wss.on("connection", socket => {
                     return;
                 }
                 const matchedProgram = await Program.findById(id);
+                if (matchedProgram === null) {
+                    console.log("Invalid Program ID: " + id);
+                    return;
+                }
                 let storedDoc = automerge.load(matchedProgram.doc);
                 const parsedChanges = JSON.parse(changes);
                 storedDoc = automerge.applyChanges(storedDoc, parsedChanges);
@@ -96,9 +104,6 @@ wss.on("connection", socket => {
                             sock.send(message);
                         }
                     });
-                    console.log(
-                        "New Doc Contents: " + storedDoc.content.toString()
-                    );
 
                     // Adds socket to channel if it's not already in there
                     if (socketBucket[id].indexOf(socket) == -1) {
@@ -115,6 +120,8 @@ wss.on("connection", socket => {
     });
 
     socket.onclose = () => {
+        console.log("Socket Closed");
+        printSocketCount();
         closeSocket(socket);
     };
 });
@@ -133,7 +140,6 @@ const closeSocket = ws => {
 
 // pings
 const interval = setInterval(function ping() {
-    console.log(wss.clients.size);
     wss.clients.forEach(function each(ws) {
         if (ws.isAlive === false) {
             closeSocket(ws);
