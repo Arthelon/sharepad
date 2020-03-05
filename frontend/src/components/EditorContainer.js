@@ -85,8 +85,9 @@ function EditorContainer() {
                     readOnly: false
                 });
             } else if (message.type === WS_MESSAGE_TYPES.server_doc_changes) {
+                flushChangeHandler();
+                // defer server changes until current changes are flushed
                 setTimeout(() => {
-                    flushChangeHandler();
                     const { changes, startIdx, changeLength } = message.data;
                     doc.current = automerge.applyChanges(
                         doc.current,
